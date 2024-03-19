@@ -3,7 +3,14 @@ PartOf=opentofu-runner.target
 [Install]
 WantedBy=opentofu-runner.target
 [Service]
-ExecStart=/usr/bin/ruby -e sleep
+User=manageiq
+Group=manageiq
+ExecStartPre=/bin/rm -f /tmp/%n.cid
+ExecStart=/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroups=no-conmon --log-driver=journald --name=opentofu-runner docker.io/agrare/sleep:latest
+ExecStop=/usr/bin/podman stop --ignore -t 30 --cidfile %T/%N.cid
+ExecStopPost=/usr/bin/podman rm --ignore --cidfile %T/%N.cid
+ExecStopPost=/usr/bin/rm -f %T/%N.pid %T/%N.cid
+KillMode=none
 Type=simple
 Restart=always
 Slice=manageiq.slice
