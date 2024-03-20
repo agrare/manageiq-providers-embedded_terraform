@@ -33,6 +33,11 @@ class OpentofuWorker < MiqWorker
     ENV["OPENTOFU_RUNNER_IMAGE"] || default_image
   end
 
+  def enable_systemd_unit
+    super
+    create_podman_secret
+  end
+
   def unit_config_file
     # Override this in a sub-class if the specific instance needs
     # any additional config
@@ -54,5 +59,14 @@ class OpentofuWorker < MiqWorker
       "DATABASE_USERNAME=#{database_config[:username]}",
       "MEMCACHED_SERVER=#{::Settings.session.memcache_server}"
     ]
+  end
+
+  def create_podman_secret
+    return if AwesomeSpawn.run("podman", :params => %w[secret exists opentofu-runner-secret]).success?
+
+    database_password = ActiveRecord::Base.connection_db_config.configuration_hash[:password]
+    secret = {"DATABASE_PASSWORD" => database_password}
+
+    AwesomeSpawn.run!("podman", :params => %w[secret create opentofu-runner-secret -], :in_data => secret.to_json)
   end
 end
