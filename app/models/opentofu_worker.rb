@@ -62,11 +62,11 @@ class OpentofuWorker < MiqWorker
   end
 
   def create_podman_secret
-    return if AwesomeSpawn.run("podman", :params => %w[secret exists opentofu-runner-secret]).success?
+    return if AwesomeSpawn.run("runuser", :params => %w[secret exists opentofu-runner-secret]).success?
 
     database_password = ActiveRecord::Base.connection_db_config.configuration_hash[:password]
     secret = {"DATABASE_PASSWORD" => database_password}
 
-    AwesomeSpawn.run!("podman", :params => %w[secret create opentofu-runner-secret -], :in_data => secret.to_json)
+    AwesomeSpawn.run!("runuser", :params => [[:login, "manageiq"], [:command, "podman secret create opentofu-runner-secret -"]], :in_data => secret.to_json)
   end
 end
