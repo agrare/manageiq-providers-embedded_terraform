@@ -6,7 +6,7 @@ WantedBy=opentofu-runner.target
 User=manageiq
 Group=manageiq
 ExecStartPre=/bin/rm -f /tmp/%n.cid
-ExecStart=/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroup-manager=cgroupfs --cgroups=no-conmon --log-driver=journald --name=opentofu-runner --secret=opentofu-runner-secret docker.io/agrare/sleep:latest
+ExecStart=/usr/bin/podman run --conmon-pidfile %T/%N.pid --cidfile %T/%N.cid --cgroup-manager=cgroupfs --cgroups=no-conmon --log-driver=journald --name=opentofu-runner --secret=opentofu-runner-secret docker.io/agrare/opentofu-runner:latest
 ExecStop=/usr/bin/podman stop --ignore -t 30 --cidfile %T/%N.cid --cgroup-manager=cgroupfs
 ExecStopPost=/usr/bin/podman rm --ignore --cidfile %T/%N.cid --cgroup-manager=cgroupfs
 ExecStopPost=/usr/bin/rm -f %T/%N.pid %T/%N.cid
