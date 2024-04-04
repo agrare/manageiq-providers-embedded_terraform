@@ -1,0 +1,1 @@
+{"schemaVersion":2,"manifests":[{"mediaType":"application/vnd.oci.image.manifest.v1+json","digest":"sha256:9bb99e63faf8b7234212acabed153407f6830ad3e33494334bf94c2d4d5b0608","size":1185,"annotations":{"org.opencontainers.image.ref.name":"docker.io/agrare/opentofu-runner:latest"}}]}
