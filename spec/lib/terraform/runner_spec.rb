@@ -28,8 +28,8 @@ RSpec.describe(Terraform::Runner) do
     end
   end
 
-  context '.run_async hello-world' do
-    describe '.run_async with input_var' do
+  context '.run hello-world' do
+    describe '.run with input_var' do
       create_stub = nil
       retrieve_stub = nil
 
@@ -62,7 +62,7 @@ RSpec.describe(Terraform::Runner) do
       let(:input_vars) { {'name' => 'New World'} }
 
       it "start running hello-world terraform template" do
-        async_response = Terraform::Runner.run_async(input_vars, File.join(__dir__, "runner/data/hello-world"))
+        async_response = Terraform::Runner.run(input_vars, File.join(__dir__, "runner/data/hello-world"))
         expect(create_stub).to(have_been_requested.times(1))
 
         response = async_response.response
@@ -92,7 +92,7 @@ RSpec.describe(Terraform::Runner) do
       end
 
       it "is aliased as run" do
-        expect(Terraform::Runner.method(:run)).to(eq(Terraform::Runner.method(:run_async)))
+        expect(Terraform::Runner.method(:run)).to(eq(Terraform::Runner.method(:run)))
       end
     end
 
@@ -125,7 +125,7 @@ RSpec.describe(Terraform::Runner) do
       end
     end
 
-    describe 'Stop running .run_async template job' do
+    describe 'Stop running .run template job' do
       create_stub = nil
       retrieve_stub = nil
       cancel_stub = nil
@@ -166,7 +166,7 @@ RSpec.describe(Terraform::Runner) do
       let(:input_vars) { {} }
 
       it "start running, then stop the before it completes" do
-        async_response = Terraform::Runner.run_async(input_vars, File.join(__dir__, "runner/data/hello-world"))
+        async_response = Terraform::Runner.run(input_vars, File.join(__dir__, "runner/data/hello-world"))
         expect(create_stub).to(have_been_requested.times(1))
         expect(retrieve_stub).to(have_been_requested.times(0))
 
@@ -199,7 +199,7 @@ RSpec.describe(Terraform::Runner) do
   end
 
   context '.run with cloud credentials' do
-    describe '.run_async with amazon credential' do
+    describe '.run with amazon credential' do
       let(:amazon_cred) do
         params = {
           :userid         => "manageiq-aws",
@@ -259,7 +259,7 @@ RSpec.describe(Terraform::Runner) do
       let(:input_vars) { {} }
 
       it "start running terraform template with amazon credential" do
-        Terraform::Runner.run_async(
+        Terraform::Runner.run(
           input_vars,
           File.join(__dir__, "runner/data/hello-world"),
           :credentials => [amazon_cred]
@@ -268,7 +268,7 @@ RSpec.describe(Terraform::Runner) do
       end
     end
 
-    describe '.run_async with vSphere & ibmcloud credential' do
+    describe '.run with vSphere & ibmcloud credential' do
       let(:vsphere_cred) do
         params = {
           :userid   => "userid",
@@ -343,7 +343,7 @@ RSpec.describe(Terraform::Runner) do
       let(:input_vars) { {} }
 
       it "start running terraform template with vSphere & ibmcloud credentials" do
-        Terraform::Runner.run_async(
+        Terraform::Runner.run(
           input_vars,
           File.join(__dir__, "runner/data/hello-world"),
           :credentials => [vsphere_cred, ibmcloud_cred]

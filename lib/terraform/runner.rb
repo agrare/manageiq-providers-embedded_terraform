@@ -25,7 +25,7 @@ module Terraform
       # @param env_vars [Hash] Hash with key/value pairs that will be passed as environment variables to the
       #        terraform-runner run
       # @return [Terraform::Runner::ResponseAsync] Response object of terraform-runner create action
-      def run_async(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
+      def run(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
         _log.debug("Run_aysnc template: #{template_path}")
         response = create_stack_job(
           template_path,
@@ -37,16 +37,12 @@ module Terraform
         Terraform::Runner::ResponseAsync.new(response.stack_id)
       end
 
-      # To simplify clients who may just call run, we alias it to call
-      # run_async.  If we ever need run_sync, we'll need to revisit this.
-      alias run run_async
-
       # Stop running terraform-runner job by stack_id
       #
       # @param stack_id [String] stack_id from the terraforn-runner job
       #
       # @return [Terraform::Runner::Response] Response object with result of terraform run
-      def stop_async(stack_id)
+      def stop(stack_id)
         cancel_stack_job(stack_id)
       end
 
@@ -55,7 +51,7 @@ module Terraform
       # @param stack_id [String] stack_id from the terraforn-runner job
       #
       # @return [Terraform::Runner::Response] Response object with result of terraform run
-      def fetch_result_by_stack_id(stack_id)
+      def status(stack_id)
         retrieve_stack_job(stack_id)
       end
 
