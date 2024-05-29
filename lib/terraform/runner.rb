@@ -5,6 +5,9 @@ require 'base64'
 
 module Terraform
   class Runner
+    class Error < StandardError
+    end
+
     class << self
       def available?
         return @available if defined?(@available)
@@ -25,8 +28,8 @@ module Terraform
       # @param env_vars [Hash] Hash with key/value pairs that will be passed as environment variables to the
       #        terraform-runner run
       # @return [Terraform::Runner::ResponseAsync] Response object of terraform-runner create action
-      def run(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
-        _log.debug("Run_aysnc template: #{template_path}")
+      # @raise [Terraform::Runner::Error] Raises an exception if runnign the template fails
+      def run!(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
         response = create_stack_job(
           template_path,
           :input_vars  => input_vars,
@@ -34,7 +37,27 @@ module Terraform
           :credentials => credentials,
           :env_vars    => env_vars
         )
+
+        raise Terraform::Runner::Error, response.error_message if response.status == "FAILED"
+
         Terraform::Runner::ResponseAsync.new(response.stack_id)
+      end
+
+      # Run a template, initiates terraform-runner job for running a template, via terraform-runner api
+      #
+      # @param input_vars [Hash] Hash with key/value pairs that will be passed as input variables to the
+      #        terraform-runner run
+      # @param template_path [String] Path to the template we will want to run
+      # @param tags [Hash] Hash with key/values pairs that will be passed as tags to the terraform-runner run
+      # @param credentials [Array] List of Authentication objects to provide to the terraform run
+      # @param env_vars [Hash] Hash with key/value pairs that will be passed as environment variables to the
+      #        terraform-runner run
+      # @return [Terraform::Runner::ResponseAsync, nil] Response object of terraform-runner create action, or nil on failure
+      def run(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
+        run!(input_vars, template_path, :tags => tags, :credentials => credentials, :env_vars => env_vars)
+      rescue Terraform::Runner::Error => err
+        _log.error("Failed to run template [#{template_path}]: #{err}")
+        nil
       end
 
       # Stop running terraform-runner job by stack_id
