@@ -56,7 +56,7 @@ module Terraform
       def run(input_vars, template_path, tags: nil, credentials: [], env_vars: {})
         run!(input_vars, template_path, :tags => tags, :credentials => credentials, :env_vars => env_vars)
       rescue Terraform::Runner::Error => err
-        _log.error("Failed to run template [#{template_path}]: #{err}")
+        $embedded_terraform_log.error("Failed to run template [#{template_path}]: #{err}")
         nil
       end
 
@@ -139,7 +139,7 @@ module Terraform
         env_vars: {},
         name: "stack-#{rand(36**8).to_s(36)}"
       )
-        _log.info("start stack_job for template: #{template_path}")
+        $embedded_terraform_log.info("start stack_job for template: #{template_path}")
         tenant_id = stack_tenant_id
         encoded_zip_file = encoded_zip_from_directory(template_path)
 
@@ -156,8 +156,8 @@ module Terraform
           "api/stack/create",
           *json_post_arguments(payload)
         )
-        _log.debug("==== http_response.body: \n #{http_response.body}")
-        _log.info("stack_job for template: #{template_path} running ...")
+        $embedded_terraform_log.debug("==== http_response.body: \n #{http_response.body}")
+        $embedded_terraform_log.info("stack_job for template: #{template_path} running ...")
         Terraform::Runner::Response.parsed_response(http_response)
       end
 
@@ -167,7 +167,7 @@ module Terraform
           "api/stack/retrieve",
           *json_post_arguments({:stack_id => stack_id})
         )
-        _log.info("==== Retrieve Stack Response: \n #{http_response.body}")
+        $embedded_terraform_log.info("==== Retrieve Stack Response: \n #{http_response.body}")
         Terraform::Runner::Response.parsed_response(http_response)
       end
 
@@ -177,7 +177,7 @@ module Terraform
           "api/stack/cancel",
           *json_post_arguments({:stack_id => stack_id})
         )
-        _log.info("==== Cancel Stack Response: \n #{http_response.body}")
+        $embedded_terraform_log.info("==== Cancel Stack Response: \n #{http_response.body}")
         Terraform::Runner::Response.parsed_response(http_response)
       end
 
@@ -187,11 +187,11 @@ module Terraform
         dir_path = dir_path[0...-1] if dir_path.end_with?('/')
 
         Tempfile.create(%w[opentofu-runner-payload .zip]) do |zip_file_path|
-          _log.debug("Create #{zip_file_path}")
+          $embedded_terraform_log.debug("Create #{zip_file_path}")
           Zip::File.open(zip_file_path, Zip::File::CREATE) do |zipfile|
             Dir.chdir(dir_path)
             Dir.glob("**/*").select { |fn| File.file?(fn) }.each do |file|
-              _log.debug("Adding #{file}")
+              $embedded_terraform_log.debug("Adding #{file}")
               zipfile.add(file.sub("#{dir_path}/", ''), file)
             end
           end
