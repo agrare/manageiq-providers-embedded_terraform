@@ -22,7 +22,7 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Job < Job
     template_path = File.join(options[:git_checkout_tempdir], template_relative_path)
     credentials   = Authentication.where(:id => options[:credentials])
 
-    response = Terraform::Runner.run(
+    response = Terraform::Runner.run!(
       options[:input_vars],
       template_path,
       :credentials => credentials,
@@ -33,6 +33,8 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Job < Job
     save!
 
     queue_poll_runner
+  rescue Terraform::Runner::Error => err
+    signal_abort(err.message, "error")
   end
 
   def poll_runner
