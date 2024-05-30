@@ -1,0 +1,22 @@
+[Unit]
+Description=Opentofu Runner Container
+After=local-fs.target
+
+[Container]
+Image=${OPENTOFU_RUNNER_IMAGE}
+PodmanArgs=--root /var/www/miq/vmdb/data/containers/storage
+ContainerName=opentofu-runner
+Secret=opentofu-runner-secret
+Volume=/var/lib/manageiq/opentofu-runner/certs:/opt/app-root/src/config/cert:z
+Environment=DATABASE_HOSTNAME=${DATABASE_HOSTNAME}
+Environment=DATABASE_NAME=${DATABASE_NAME}
+Environment=DATABASE_USERNAME=${DATABASE_USERNAME}
+Environment=MEMCACHE_SERVERS=${MEMCACHE_SERVERS}
+ExposeHostPort=6000
+Network=host
+
+[Service]
+Restart=on-failure
+User=manageiq
+Group=manageiq
+Slice=manageiq.slice
