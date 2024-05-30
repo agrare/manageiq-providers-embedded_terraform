@@ -57,7 +57,7 @@ class OpentofuWorker < MiqWorker
   end
 
   def enable_systemd_unit
-    super
+    create_cid_runfile
     create_tls_certs
     create_podman_secret
   end
@@ -81,6 +81,12 @@ class OpentofuWorker < MiqWorker
       definition[:spec][:template][:spec][:containers].first[:volumeMounts] << {:name => "cert-path", :mountPath => "/opt/app-root/src/config/cert"}
       definition[:spec][:template][:spec][:volumes] << {:name => "cert-path", :secret => {:secretName => ENV["API_SSL_SECRET_NAME"], :items => [{:key => "tf_runner_crt", :path => "tls.crt"}, {:key => "tf_runner_key", :path => "tls.key"}], :defaultMode => 420}}
     end
+  end
+
+  def create_cid_runfile
+    cid_runfile = Pathname.new("/run/opentofu-runner.cid")
+    cid_runfile.write(nil)
+    cid_runfile.chown(manageiq_uid, manageiq_gid)
   end
 
   def create_tls_certs
