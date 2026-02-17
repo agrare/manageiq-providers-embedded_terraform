@@ -123,6 +123,10 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Job < Job
     @template_payload ||= configuration_script&.parent
   end
 
+  def configuration_script_source
+    @configuration_script_source ||= template_payload.configuration_script_source
+  end
+
   def template_relative_path
     JSON.parse(template_payload.payload)["relative_path"]
   end
@@ -140,10 +144,6 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Job < Job
 
   def decrypt_vars(input_vars)
     input_vars.transform_values { |val| val.kind_of?(String) ? ManageIQ::Password.try_decrypt(val) : val }
-  end
-
-  def configuration_script_source
-    @configuration_script_source ||= configuration_script.configuration_script_source
   end
 
   def queue_poll_runner

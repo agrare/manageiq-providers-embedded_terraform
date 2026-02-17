@@ -4,8 +4,7 @@ module ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Provision::Sta
   end
 
   def provision
-    stack_class = "#{source.class.module_parent}::Stack".constantize
-    stack = stack_class.create_stack(source)
+    stack = stack_klass.create_stack(source)
 
     phase_context[:stack_id] = stack.id
 
@@ -47,7 +46,11 @@ module ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Provision::Sta
     mark_execution_servers
   end
 
+  def stack_klass
+    @stack_klass ||= "#{source.class.module_parent}::Stack".constantize
+  end
+
   def stack
-    @stack ||= stack_class.find(phase_context[:stack_id])
+    @stack ||= stack_klass.find(phase_context[:stack_id])
   end
 end

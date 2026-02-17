@@ -1,5 +1,6 @@
 class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::ProvisionWorkflow < ManageIQ::Providers::AutomationManager::ProvisionWorkflow
   def dialog_name_from_automate(message = 'get_dialog_name', extra_attrs = {})
+    extra_attrs['platform'] ||= 'embedded_terraform'
     super
   end
 

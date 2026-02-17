@@ -20,7 +20,8 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
         :ext_management_system        => terraform_template.manager,
         :verbosity                    => options[:verbosity].to_i,
         :authentications              => authentications,
-        :configuration_script_payload => terraform_template,
+        :configuration_script         => terraform_template,
+        :configuration_script_payload => terraform_template.parent,
         :miq_task                     => miq_task,
         :status                       => miq_task&.state,
         :start_time                   => miq_task&.started_on
@@ -50,6 +51,10 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
       self.finish_time = raw_status.completed? ? miq_task.updated_on : nil
       save!
     end
+  end
+
+  def status_class
+    "#{name}::Status".constantize
   end
 
   def raw_status
