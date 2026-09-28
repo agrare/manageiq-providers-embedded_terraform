@@ -78,7 +78,7 @@ module ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Provision::Sta
 
   def credentials_from_options
     credential_id = get_option(:credential_id)
-    return [] if credential_id
+    return [] if credential_id.blank?
 
     [Authentication.find_by(:id => credential_id)&.native_ref].compact
   end
