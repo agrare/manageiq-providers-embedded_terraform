@@ -27,6 +27,116 @@ describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Provision do
   end
   let(:stack_options) { {:action => ResourceAction::PROVISION, :input_vars => {}, :credentials => []} }
 
+  describe ".configuration_script_ref=" do
+    let(:scm_url)    { "https://example.com/repo.git" }
+    let(:scm_branch) { "main" }
+    let(:script_source) do
+      FactoryBot.create(
+        :configuration_script_source,
+        :type       => "ManageIQ::Providers::EmbeddedTerraform::AutomationManager::ConfigurationScriptSource",
+        :manager    => ems,
+        :scm_url    => scm_url,
+        :scm_branch => scm_branch
+      )
+    end
+    let(:configuration_script_with_source) do
+      FactoryBot.create(
+        :configuration_script_embedded_terraform,
+        :manager                        => ems,
+        :parent                         => terraform_template,
+        :configuration_script_source_id => script_source.id,
+        :name                           => "myorg/my-template"
+      )
+    end
+
+    it "resolves a ConfigurationScript matching scm_url, scm_branch and name" do
+      provision = described_class.new(
+        :userid                   => admin.userid,
+        :miq_request              => miq_request,
+        :request_type             => 'template',
+        :state                    => "pending",
+        :status                   => 'Ok',
+        :options                  => options,
+        :configuration_script_ref => {
+          :scm_url    => scm_url,
+          :scm_branch => scm_branch,
+          :name       => configuration_script_with_source.name
+        }
+      )
+
+      expect(provision.source).to eq(configuration_script_with_source)
+    end
+
+    it "leaves source unchanged when scm_url does not match" do
+      provision = described_class.new(
+        :userid                   => admin.userid,
+        :miq_request              => miq_request,
+        :request_type             => 'template',
+        :state                    => "pending",
+        :status                   => 'Ok',
+        :options                  => options,
+        :configuration_script_ref => {
+          :scm_url    => "https://other.example.com/repo.git",
+          :scm_branch => scm_branch,
+          :name       => configuration_script_with_source.name
+        }
+      )
+
+      expect(provision.source).to be_nil
+    end
+
+    it "leaves source unchanged when scm_branch does not match" do
+      provision = described_class.new(
+        :userid                   => admin.userid,
+        :miq_request              => miq_request,
+        :request_type             => 'template',
+        :state                    => "pending",
+        :status                   => 'Ok',
+        :options                  => options,
+        :configuration_script_ref => {
+          :scm_url    => scm_url,
+          :scm_branch => "nonexistent-branch",
+          :name       => configuration_script_with_source.name
+        }
+      )
+
+      expect(provision.source).to be_nil
+    end
+
+    it "leaves source unchanged when the template name does not match" do
+      provision = described_class.new(
+        :userid                   => admin.userid,
+        :miq_request              => miq_request,
+        :request_type             => 'template',
+        :state                    => "pending",
+        :status                   => 'Ok',
+        :options                  => options,
+        :configuration_script_ref => {
+          :scm_url    => scm_url,
+          :scm_branch => scm_branch,
+          :name       => "nonexistent/template"
+        }
+      )
+
+      expect(provision.source).to be_nil
+    end
+
+    it "is ignored when configuration_script_ref is blank" do
+      provision = described_class.new(
+        :userid                   => admin.userid,
+        :miq_request              => miq_request,
+        :source                   => configuration_script,
+        :request_type             => 'template',
+        :state                    => "pending",
+        :status                   => 'Ok',
+        :options                  => options,
+        :configuration_script_ref => nil
+      )
+
+      expect(provision.source).to eq(configuration_script)
+    end
+  end
+
   it ".my_role" do
     expect(subject.my_role).to eq("ems_operations")
   end
