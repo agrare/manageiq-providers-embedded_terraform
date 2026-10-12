@@ -296,4 +296,155 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
       end
     end
   end
+
+  describe "#refresh" do
+    let(:ems)   { FactoryBot.create(:embedded_automation_manager_terraform) }
+    let(:stack) { FactoryBot.create(:terraform_stack, :ext_management_system => ems) }
+
+    context "when retired" do
+      before { allow(stack).to receive(:retired?).and_return(true) }
+
+      it "returns early without updating the stack" do
+        expect(stack).not_to receive(:save!)
+        stack.refresh
+      end
+    end
+
+    context "when error_retiring" do
+      before do
+        allow(stack).to receive(:retired?).and_return(false)
+        allow(stack).to receive(:error_retiring?).and_return(true)
+      end
+
+      it "returns early without updating the stack" do
+        expect(stack).not_to receive(:save!)
+        stack.refresh
+      end
+    end
+
+    context "when retiring" do
+      before do
+        allow(stack).to receive(:retired?).and_return(false)
+        allow(stack).to receive(:error_retiring?).and_return(false)
+        allow(stack).to receive(:retiring?).and_return(true)
+      end
+
+      context "when delete_miq_task is nil" do
+        before { allow(stack).to receive(:delete_miq_task).and_return(nil) }
+
+        it "returns early without calling poll_runner" do
+          expect(stack).not_to receive(:delete_job)
+          stack.refresh
+        end
+      end
+
+      context "when delete_miq_task is present and raw_status is running" do
+        let(:delete_miq_task) { FactoryBot.create(:miq_task, :state => MiqTask::STATE_ACTIVE, :status => MiqTask::STATUS_OK) }
+        let(:delete_job)      { FactoryBot.create(:embedded_terraform_job, :miq_task => delete_miq_task, :options => {:action => ResourceAction::RETIREMENT}) }
+
+        before do
+          # raw_status returns nil when miq_task is nil; stub it so Status.new(stack)
+          # runs and picks up delete_miq_task (STATE_ACTIVE → running? == true).
+          allow(stack).to receive(:miq_task).and_return(delete_miq_task)
+          allow(stack).to receive(:delete_miq_task).and_return(delete_miq_task)
+          allow(stack).to receive(:delete_job).and_return(delete_job)
+        end
+
+        it "calls poll_runner on the delete_job" do
+          expect(delete_job).to receive(:poll_runner)
+          stack.refresh
+        end
+      end
+
+      context "when delete_miq_task is present and raw_status is completed (not running)" do
+        let(:delete_miq_task) { FactoryBot.create(:miq_task, :state => MiqTask::STATE_FINISHED, :status => MiqTask::STATUS_OK) }
+        let(:delete_job)      { FactoryBot.create(:embedded_terraform_job, :miq_task => delete_miq_task, :options => {:action => ResourceAction::RETIREMENT}) }
+
+        before do
+          # raw_status returns nil when miq_task is nil; stub it so Status.new(stack)
+          # runs and picks up delete_miq_task (STATE_FINISHED → running? == false).
+          allow(stack).to receive(:miq_task).and_return(delete_miq_task)
+          allow(stack).to receive(:delete_miq_task).and_return(delete_miq_task)
+          allow(stack).to receive(:delete_job).and_return(delete_job)
+        end
+
+        it "does not call poll_runner" do
+          expect(delete_job).not_to receive(:poll_runner)
+          stack.refresh
+        end
+      end
+    end
+
+    context "when not retiring (provisioning or reconfiguring)" do
+      before do
+        allow(stack).to receive(:retired?).and_return(false)
+        allow(stack).to receive(:error_retiring?).and_return(false)
+        allow(stack).to receive(:retiring?).and_return(false)
+      end
+
+      context "when miq_task is nil" do
+        before { stack.update!(:ems_ref => nil) }
+
+        it "returns early without updating the stack" do
+          expect(stack).not_to receive(:save!)
+          stack.refresh
+        end
+      end
+
+      context "when miq_task is present and the task is still running" do
+        let(:started_on) { 5.minutes.ago.utc.change(:usec => 0) }
+        let(:miq_task)   { FactoryBot.create(:miq_task, :state => MiqTask::STATE_ACTIVE, :status => MiqTask::STATUS_OK, :started_on => started_on) }
+
+        before { stack.update!(:ems_ref => miq_task.id) }
+
+        it "updates status and start_time, and sets finish_time to nil" do
+          stack.refresh
+          stack.reload
+
+          expect(stack.status).to    eq(MiqTask::STATE_ACTIVE)
+          expect(stack.start_time).to eq(started_on)
+          expect(stack.finish_time).to be_nil
+        end
+      end
+
+      context "when miq_task is present and the task is completed successfully" do
+        let(:started_on)  { 10.minutes.ago.utc.change(:usec => 0) }
+        let(:finished_on) { 5.minutes.ago.utc.change(:usec => 0) }
+        let(:miq_task) do
+          FactoryBot.create(:miq_task, :state => MiqTask::STATE_FINISHED, :status => MiqTask::STATUS_OK, :started_on => started_on, :updated_on => finished_on)
+        end
+
+        before { stack.update!(:ems_ref => miq_task.id) }
+
+        it "updates status, start_time, and sets finish_time" do
+          stack.refresh
+          stack.reload
+
+          expect(stack.status).to     eq(MiqTask::STATE_FINISHED)
+          expect(stack.start_time).to  eq(started_on)
+          expect(stack.finish_time).to eq(finished_on)
+        end
+      end
+
+      context "when miq_task is present and the task is completed with an error" do
+        let(:started_on)  { 10.minutes.ago.utc.change(:usec => 0) }
+        let(:finished_on) { 5.minutes.ago.utc.change(:usec => 0) }
+        let(:miq_task) do
+          FactoryBot.create(:miq_task, :state => MiqTask::STATE_FINISHED, :status => MiqTask::STATUS_ERROR, :started_on => started_on, :updated_on => finished_on)
+        end
+
+        before { stack.update!(:ems_ref => miq_task.id) }
+
+        it "updates status, start_time, and sets finish_time" do
+          stack.refresh
+          stack.reload
+
+          expect(stack.status).to     eq(MiqTask::STATE_FINISHED)
+          expect(stack.start_time).to  eq(started_on)
+          expect(stack.finish_time).to eq(finished_on)
+        end
+      end
+
+    end
+  end
 end
