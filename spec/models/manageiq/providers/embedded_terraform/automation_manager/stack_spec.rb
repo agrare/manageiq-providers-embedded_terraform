@@ -401,8 +401,8 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
           stack.refresh
           stack.reload
 
-          expect(stack.status).to    eq(MiqTask::STATE_ACTIVE)
-          expect(stack.start_time).to eq(started_on)
+          expect(stack.status).to      eq(MiqTask::STATE_ACTIVE)
+          expect(stack.start_time).to  eq(started_on)
           expect(stack.finish_time).to be_nil
         end
       end
@@ -410,19 +410,35 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
       context "when miq_task is present and the task is completed successfully" do
         let(:started_on)  { 10.minutes.ago.utc.change(:usec => 0) }
         let(:finished_on) { 5.minutes.ago.utc.change(:usec => 0) }
+        let(:outputs)     { [{"name" => "message", "type" => "string", "value" => "Hello, World!"}] }
+        let(:stack_data)  { Terraform::Runner::Response.new('action' => 'CREATE', 'details' => {'resources' => [], 'outputs' => outputs}) }
         let(:miq_task) do
           FactoryBot.create(:miq_task, :state => MiqTask::STATE_FINISHED, :status => MiqTask::STATUS_OK, :started_on => started_on, :updated_on => finished_on)
         end
 
-        before { stack.update!(:ems_ref => miq_task.id) }
+        before do
+          stack.update!(:ems_ref => miq_task.id)
+          allow(stack).to receive(:terraform_runner_stack_data).and_return(stack_data)
+        end
 
         it "updates status, start_time, and sets finish_time" do
           stack.refresh
           stack.reload
 
-          expect(stack.status).to     eq(MiqTask::STATE_FINISHED)
+          expect(stack.status).to      eq(MiqTask::STATE_FINISHED)
           expect(stack.start_time).to  eq(started_on)
           expect(stack.finish_time).to eq(finished_on)
+        end
+
+        it "creates orchestration_stack_outputs" do
+          stack.refresh
+          stack.reload
+
+          expect(stack.orchestration_stack_outputs.count).to eq(outputs.count)
+          expect(stack.orchestration_stack_outputs.first).to have_attributes(
+            :key   => "message",
+            :value => "Hello, World!"
+          )
         end
       end
 
@@ -439,12 +455,11 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
           stack.refresh
           stack.reload
 
-          expect(stack.status).to     eq(MiqTask::STATE_FINISHED)
+          expect(stack.status).to      eq(MiqTask::STATE_FINISHED)
           expect(stack.start_time).to  eq(started_on)
           expect(stack.finish_time).to eq(finished_on)
         end
       end
-
     end
   end
 end
