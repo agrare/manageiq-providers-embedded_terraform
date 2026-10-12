@@ -144,6 +144,9 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
       # when provisioning or reconfiguring
       return unless miq_task
 
+      stack_data = terraform_runner_stack_data
+      outputs    = stack_data&.details&.[]("outputs")
+
       transaction do
         current_miq_task = raw_status.miq_task
 
@@ -151,6 +154,13 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
         self.start_time  = current_miq_task.started_on
         self.finish_time = raw_status.completed? ? current_miq_task.updated_on : nil
         save!
+
+        if outputs.present?
+          orchestration_stack_outputs.delete_all
+          outputs.each do |output|
+            orchestration_stack_outputs.create!(:key => output["name"], :value => output["value"].to_json, :value_type => "JSON")
+          end
+        end
       end
     end
   end
