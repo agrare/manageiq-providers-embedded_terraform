@@ -158,7 +158,23 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
         if outputs.present?
           orchestration_stack_outputs.delete_all
           outputs.each do |output|
-            orchestration_stack_outputs.create!(:key => output["name"], :value => output["value"].to_json, :value_type => "JSON")
+            value, value_type =
+              case output["type"]
+              when "number"
+                num = output["value"]
+                num.kind_of?(Integer) ? [num.to_s, "integer"] : [num.to_s, "float"]
+              when "bool"
+                [output["value"].to_s, "boolean"]
+              when "list", "tuple", "set"
+                [output["value"].to_json, "array"]
+              when "map", "object"
+                [output["value"].to_json, "object"]
+              else
+                # string or unknown/nil type — store as plain string
+                [output["value"].to_s, "string"]
+              end
+
+            orchestration_stack_outputs.create!(:key => output["name"], :value => value, :value_type => value_type)
           end
         end
       end
