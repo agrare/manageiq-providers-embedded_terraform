@@ -24,6 +24,8 @@ module ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Provision::Sta
   end
 
   def check_provisioned
+    stack.refresh
+
     if running?
       requeue_phase
     else
