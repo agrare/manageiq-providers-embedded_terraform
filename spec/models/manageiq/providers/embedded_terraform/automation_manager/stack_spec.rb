@@ -526,10 +526,7 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
             {"name" => "float_out",  "type" => "number", "value" => 3.14},
             {"name" => "bool_out",   "type" => "bool",   "value" => true},
             {"name" => "list_out",   "type" => "list",   "value" => %w[a b]},
-            {"name" => "set_out",    "type" => "set",    "value" => [1, 2]},
-            {"name" => "tuple_out",  "type" => "tuple",  "value" => ["x", 1]},
             {"name" => "map_out",    "type" => "map",    "value" => {"k" => "v"}},
-            {"name" => "object_out", "type" => "object", "value" => {"a" => 1}},
           ]
         end
         let(:stack_data) { Terraform::Runner::Response.new('action' => 'CREATE', 'details' => {'resources' => [], 'outputs' => outputs}) }
@@ -564,21 +561,18 @@ RSpec.describe ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack 
           expect(stack.orchestration_stack_outputs.find_by(:key => "bool_out")).to have_attributes(:value => "true", :value_type => "boolean")
         end
 
-        it "stores list, set, and tuple types as 'array' with JSON-encoded value" do
+        it "stores list type as 'array' with JSON-encoded value" do
           stack.refresh
           stack.reload
 
-          expect(stack.orchestration_stack_outputs.find_by(:key => "list_out")).to  have_attributes(:value => '["a","b"]', :value_type => "array")
-          expect(stack.orchestration_stack_outputs.find_by(:key => "set_out")).to   have_attributes(:value => '[1,2]',     :value_type => "array")
-          expect(stack.orchestration_stack_outputs.find_by(:key => "tuple_out")).to have_attributes(:value => '["x",1]',   :value_type => "array")
+          expect(stack.orchestration_stack_outputs.find_by(:key => "list_out")).to have_attributes(:value => '["a","b"]', :value_type => "array")
         end
 
-        it "stores map and object types as 'object' with JSON-encoded value" do
+        it "stores map type as 'object' with JSON-encoded value" do
           stack.refresh
           stack.reload
 
-          expect(stack.orchestration_stack_outputs.find_by(:key => "map_out")).to    have_attributes(:value => '{"k":"v"}', :value_type => "object")
-          expect(stack.orchestration_stack_outputs.find_by(:key => "object_out")).to have_attributes(:value => '{"a":1}',   :value_type => "object")
+          expect(stack.orchestration_stack_outputs.find_by(:key => "map_out")).to have_attributes(:value => '{"k":"v"}', :value_type => "object")
         end
       end
 

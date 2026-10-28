@@ -165,9 +165,9 @@ class ManageIQ::Providers::EmbeddedTerraform::AutomationManager::Stack < ManageI
                 num.kind_of?(Integer) ? [num.to_s, "integer"] : [num.to_s, "float"]
               when "bool"
                 [output["value"].to_s, "boolean"]
-              when "list", "tuple", "set"
+              when "list"
                 [output["value"].to_json, "array"]
-              when "map", "object"
+              when "map"
                 [output["value"].to_json, "object"]
               else
                 # string or unknown/nil type — store as plain string
